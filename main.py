@@ -55,14 +55,15 @@ def main():
      with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
+        
+        for search_for in search_queries:
+            page.goto("https://www.google.com/maps", timeout=60000)
 
-        page.goto("https://www.google.com/maps", timeout=60000)
+            page.locator('//input[@id="searchboxinput"]').fill(search_for)
+            page.wait_for_timeout(3000)
 
-        page.locator('//input[@id="searchboxinput"]').fill(search_for)
-        page.wait_for_timeout(3000)
-
-        page.keyboard.press("Enter")
-        page.wait_for_timeout(5000)
+            page.keyboard.press("Enter")
+            page.wait_for_timeout(5000)
 
         # scrolling
         page.hover('//a[contains(@href, "https://www.google.com/maps/place")]')
@@ -183,7 +184,7 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--search", type=str)
+    parser.add_argument("-q", "--queries", type=str, nargs='+', help="List of search queries")
     parser.add_argument("-t", "--total", type=int)
     args = parser.parse_args()
 
