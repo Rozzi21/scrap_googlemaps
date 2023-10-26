@@ -1,6 +1,3 @@
-"""This script serves as an example on how to use Python 
-   & Playwright to scrape/extract data from Google Maps"""
-
 from playwright.sync_api import sync_playwright
 from dataclasses import dataclass, asdict, field
 import pandas as pd
@@ -9,7 +6,7 @@ import argparse
 
 @dataclass
 class Business:
-    """holds business data"""
+    "bussines data"
 
     name: str = None
     address: str = None
@@ -17,13 +14,14 @@ class Business:
     phone_number: str = None
     reviews_count: int = None
     reviews_average: float = None
+    reviews: list = field(default_factory=list)
+    latitude: float = None
+    longitude: float = None
 
 
 @dataclass
 class BusinessList:
-    """holds list of Business objects,
-    and save to both excel and csv
-    """
+    """listing data dari object bussines dan di buat xlsx dan csv"""
 
     business_list: list[Business] = field(default_factory=list)
 
@@ -66,7 +64,7 @@ def main():
         page.wait_for_timeout(3000)
 
         page.keyboard.press("Enter")
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(3000)
 
         # scrolling
         page.hover('//a[contains(@href, "https://www.google.com/maps/place")]')
@@ -87,8 +85,9 @@ def main():
                 listings = page.locator(
                     '//a[contains(@href, "https://www.google.com/maps/place")]'
                 ).all()[:total]
+
                 listings = [listing.locator("xpath=..") for listing in listings]
-                print(f"Total Scraped: {len(listings)}")
+                print(f"Total: {len(listings)}")
                 break
             else:
                 # logic to break from loop to not run infinitely
@@ -118,9 +117,9 @@ def main():
         business_list = BusinessList()
 
         # scraping
+        print("mulai scrapping")
         for listing in listings:
             listing.click()
-            print(listing)
             page.wait_for_timeout(5000)
 
             name_xpath = '//div[contains(@class, "fontHeadlineSmall")]'
@@ -128,9 +127,15 @@ def main():
             website_xpath = '//a[@data-item-id="authority"]//div[contains(@class, "fontBodyMedium")]'
             phone_number_xpath = '//button[contains(@data-item-id, "phone:tel:")]//div[contains(@class, "fontBodyMedium")]'
             reviews_span_xpath = '//span[@role="img" and contains(@aria-label, "Bintang")]'
+            # ambil review harus loop berdasarkan listing
+            # reviews_name_xpath = '//button[contains(@jsaction, "reviewerLink")]'
             reviews_elements = listing.locator(reviews_span_xpath).all()
 
+            ulasan_tab = page.locator('//button[@role="tab" and contains(., "Ulasan")]')
+
             business = Business()
+
+            print("scrapping = ",listing.locator(name_xpath).inner_text())
 
             if listing.locator(name_xpath).count() > 0:
                 business.name = listing.locator(name_xpath).inner_text()
@@ -149,17 +154,32 @@ def main():
             else:
                 business.phone_number = ""
             if reviews_elements:
-                        review_element = reviews_elements[0]
-                        aria_label = review_element.get_attribute("aria-label")
-                        business.reviews_average = float(aria_label.split()[1].replace(",", ".").strip())
-                        business.reviews_count = int(aria_label.replace(".", "").split()[2].strip())
+                review_element = reviews_elements[0]
+                aria_label = review_element.get_attribute("aria-label")
+                business.reviews_average = float(aria_label.split()[1].replace(",", ".").strip())
+                business.reviews_count = int(aria_label.replace(".", "").split()[2].strip())
+            else:
+                business.reviews_average = ""
+                business.reviews_count = "" 
 
             business_list.business_list.append(business)
 
-        # saving to both excel and csv just to showcase the features.
-        business_list.save_to_excel("google_maps_data")
-        business_list.save_to_csv("google_maps_data")
+        for business in business_list.business_list:
 
+            page.locator('//input[@id="searchboxinput"]').fill(business.name)
+            page.wait_for_timeout(3000)
+            page.keyboard.press("Enter")
+            page.wait_for_timeout(3000)
+
+            current_url = page.url
+            latitude, longitude = current_url.split('@')[1].split(',')[0:2]
+            business.latitude = latitude
+            business.longitude = longitude
+            page.wait_for_timeout(3000)
+
+        
+        business_list.save_to_excel(search_for)
+        business_list.save_to_csv(search_for)
         browser.close()
 
 
@@ -174,7 +194,7 @@ if __name__ == "__main__":
     else:
         # in case no arguments passed
         # the scraper will search by defaukt for:
-        search_for = "dentist new york"
+        search_for = "kampus stimata"
 
     # total number of products to scrape. Default is 10
     if args.total:
@@ -183,3 +203,5 @@ if __name__ == "__main__":
         total = 10
 
     main()
+
+print("selesai")

@@ -6,26 +6,27 @@ import argparse
 
 @dataclass
 class Business:
-    """holds business data"""
+    "bussines data"
 
     name: str = None
     address: str = None
+    # sc
     website: str = None
     phone_number: str = None
     reviews_count: int = None
     reviews_average: float = None
-    latitude: str = None
-    longitude: str = None
+    latitude: float = None
+    longitude: float = None
 
 
 @dataclass
 class BusinessList:
-    "list_daftar"
+    """listing data dari object bussines dan di buat xlsx dan csv"""
 
     business_list: list[Business] = field(default_factory=list)
 
     def dataframe(self):
-        """jadi data frame
+        """transform business_list to pandas dataframe
 
         Returns: pandas dataframe
         """
@@ -34,7 +35,7 @@ class BusinessList:
         )
 
     def save_to_excel(self, filename):
-        """simpan data ke xlsx
+        """saves pandas dataframe to excel (xlsx) file
 
         Args:
             filename (str): filename
@@ -42,7 +43,7 @@ class BusinessList:
         self.dataframe().to_excel(f"{filename}.xlsx", index=False)
 
     def save_to_csv(self, filename):
-        """simpan ke file csv
+        """saves pandas dataframe to csv file
 
         Args:
             filename (str): filename
@@ -51,19 +52,19 @@ class BusinessList:
 
 
 def main():
-    try:
-     with sync_playwright() as p:
+    with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
-        
-        for search_for in search_queries:
-            page.goto("https://www.google.com/maps", timeout=60000)
 
-            page.locator('//input[@id="searchboxinput"]').fill(search_for)
-            page.wait_for_timeout(3000)
+        page.goto("https://www.google.com/maps", timeout=60000)
+        # wait is added for dev phase. can remove it in production
+        page.wait_for_timeout(5000)
 
-            page.keyboard.press("Enter")
-            page.wait_for_timeout(5000)
+        page.locator('//input[@id="searchboxinput"]').fill(search_for)
+        page.wait_for_timeout(3000)
+
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(3000)
 
         # scrolling
         page.hover('//a[contains(@href, "https://www.google.com/maps/place")]')
@@ -84,8 +85,9 @@ def main():
                 listings = page.locator(
                     '//a[contains(@href, "https://www.google.com/maps/place")]'
                 ).all()[:total]
+
                 listings = [listing.locator("xpath=..") for listing in listings]
-                print(f"Total Scraped: {len(listings)}")
+                print(f"Total: {len(listings)}")
                 break
             else:
                 # logic to break from loop to not run infinitely
@@ -115,6 +117,7 @@ def main():
         business_list = BusinessList()
 
         # scraping
+        print("mulai scrapping")
         for listing in listings:
             listing.click()
             page.wait_for_timeout(5000)
@@ -124,27 +127,28 @@ def main():
             website_xpath = '//a[@data-item-id="authority"]//div[contains(@class, "fontBodyMedium")]'
             phone_number_xpath = '//button[contains(@data-item-id, "phone:tel:")]//div[contains(@class, "fontBodyMedium")]'
             reviews_span_xpath = '//span[@role="img" and contains(@aria-label, "Bintang")]'
-            latitude_longitude_xpath ='//button[@jsaction="reveal.card.latLng")]'
-            business = Business()
+            # ambil review harus loop berdasarkan listing
+            # reviews_name_xpath = '//button[contains(@jsaction, "reviewerLink")]'
+            button_ulasan_xpath ='//button[@role="tab" and contains(., "Ulasan")]'
 
-            print("Clicking on:", listing.locator(name_xpath).inner_text())
-            # print("coordinates", listing.locator(latitude_longitude_xpath).inner_text())
             reviews_elements = listing.locator(reviews_span_xpath).all()
+
+            business = Business()
 
             if listing.locator(name_xpath).count() > 0:
                 business.name = listing.locator(name_xpath).inner_text()
             else:
                 business.name = ""
-            if listing.locator(address_xpath).count() > 0:
-                business.address = listing.locator(address_xpath).inner_text()
+            if page.locator(address_xpath).count() > 0:
+                business.address = page.locator(address_xpath).inner_text()
             else:
                 business.address = ""
-            if listing.locator(website_xpath).count() > 0:
-                business.website = listing.locator(website_xpath).inner_text()
+            if page.locator(website_xpath).count() > 0:
+                business.website = page.locator(website_xpath).inner_text()
             else:
                 business.website = ""
-            if listing.locator(phone_number_xpath).count() > 0:
-                business.phone_number = listing.locator(phone_number_xpath).inner_text()
+            if page.locator(phone_number_xpath).count() > 0:
+                business.phone_number = page.locator(phone_number_xpath).inner_text()
             else:
                 business.phone_number = ""
             if reviews_elements:
@@ -154,52 +158,71 @@ def main():
                 business.reviews_count = int(aria_label.replace(".", "").split()[2].strip())
             else:
                 business.reviews_average = ""
-                business.reviews_count = ""
-
-            if listing.locator(latitude_longitude_xpath).count() > 0:
-                coordinates = listing.locator(latitude_longitude_xpath).inner_text()
-                latitude, longitude = coordinates.split(', ')
-                business.latitude = latitude
-                business.longitude = longitude
-            else:
-                
-            # Jika tidak ditemukan elemen dengan koordinat, ambil dari URL
-                current_url = page.url
-                latitude, longitude = current_url.split('@')[1].split(',')[0:2]
-                business.latitude = latitude
-                business.longitude = longitude
+                business.reviews_count = "" 
 
             business_list.business_list.append(business)
 
-        # simpan ke file xlsx/csv
-        business_list.save_to_excel(f'google_maps {args.search}')
-        business_list.save_to_csv(f'google_maps {args.search}')
+        print("Mencoba menggambil latitude dan longitude")
 
-        browser.close()
+        for business in business_list.business_list:
+            name = business.name
+            address = business.address
+            page.locator('//input[@id="searchboxinput"]').fill(name + " " + address)
+            page.wait_for_timeout(3000)
+            page.keyboard.press("Enter")
+            page.wait_for_timeout(3000)
+
+            current_url = page.url
+            latitude, longitude = current_url.split('@')[1].split(',')[0:2]
+            business.latitude = latitude
+            business.longitude = longitude
+            page.wait_for_timeout(3000)
+            
+        print("Mencoba menggambil comment pada setiap bussines")
+
+        for business in business_list.business_list:
+            page.locator('//input[@id="searchboxinput"]').fill(name + " " + address)
+            page.wait_for_timeout(3000)
+            page.keyboard.press("Enter")
+            page.wait_for_timeout(3000)
+            page.get_by_label("Ulasan untuk").click()
+            page.wait_for_timeout(3000)
+            comment_elements = page.locator('//div[@class="MyEned"]').all()
+            comments_value = []
+            for element in comment_elements:
+                # Temukan elemen <span> dalam elemen "MyEned" menggunakan XPath relatif
+                span_element = element.locator('//span[@class="wiI7pd"]').first
+                # Ambil teks dari elemen <span>
+                if span_element:
+                    span_text = span_element.inner_text()
+                    print("Review Text:", span_text)
+                    comments_value.append(span_text)
+            
+
+
         
-    except Exception as e:
-        print("Terjadi kesalahan:", str(e))
-
+        business_list.save_to_excel(search_for)
+        business_list.save_to_csv(search_for)
+        browser.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-q", "--queries", type=str, nargs='+', help="List of search queries")
+    parser.add_argument("-s", "--search", type=str)
     parser.add_argument("-t", "--total", type=int)
     args = parser.parse_args()
 
     if args.search:
         search_for = args.search
     else:
-        #otomatis search ini jika kosong
-        search_for = "kopiniboss malang"
+        # in case no arguments passed
+        # the scraper will search by defaukt for:
+        search_for = "kampus stimata"
 
-    # total yang mau di cari
+    # total number of products to scrape. Default is 10
     if args.total:
         total = args.total
     else:
         total = 10
 
     main()
-
-    print("selesai cuy")
