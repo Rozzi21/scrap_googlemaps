@@ -10,13 +10,18 @@ class Business:
 
     name: str = None
     address: str = None
+    # sc
     website: str = None
     phone_number: str = None
     reviews_count: int = None
     reviews_average: float = None
-    reviews: list = field(default_factory=list)
     latitude: float = None
     longitude: float = None
+    comments: str = None
+
+@dataclass
+class Comment:
+    comment: str = None
 
 
 @dataclass
@@ -129,13 +134,11 @@ def main():
             reviews_span_xpath = '//span[@role="img" and contains(@aria-label, "Bintang")]'
             # ambil review harus loop berdasarkan listing
             # reviews_name_xpath = '//button[contains(@jsaction, "reviewerLink")]'
+            button_ulasan_xpath ='//button[@role="tab" and contains(., "Ulasan")]'
+
             reviews_elements = listing.locator(reviews_span_xpath).all()
 
-            ulasan_tab = page.locator('//button[@role="tab" and contains(., "Ulasan")]')
-
             business = Business()
-
-            print("scrapping = ",listing.locator(name_xpath).inner_text())
 
             if listing.locator(name_xpath).count() > 0:
                 business.name = listing.locator(name_xpath).inner_text()
@@ -162,22 +165,42 @@ def main():
                 business.reviews_average = ""
                 business.reviews_count = "" 
 
+                name = business.name
+                address = business.address
+                page.locator('//input[@id="searchboxinput"]').fill(name)
+                page.wait_for_timeout(3000)
+                page.keyboard.press("Enter")
+                page.wait_for_timeout(3000)
+
+                current_url = page.url
+                latitude, longitude = current_url.split('@')[1].split(',')[0:2]
+                business.latitude = latitude
+                business.longitude = longitude
+                page.wait_for_timeout(3000)
+                
+                page.locator('//input[@id="searchboxinput"]').fill(name + " " + address)
+                page.wait_for_timeout(3000)
+                page.keyboard.press("Enter")
+                page.wait_for_timeout(3000)
+                page.get_by_label("Ulasan untuk").click()
+                page.wait_for_timeout(3000)
+                comment_elements = page.locator('//div[@class="MyEned"]').all()
+                comments_value = []
+                for element in comment_elements:
+                    # Temukan elemen <span> dalam elemen "MyEned" menggunakan XPath relatif
+                    span_element = element.locator('//span[@class="wiI7pd"]').first
+                    # Ambil teks dari elemen <span>
+                    if span_element:
+                        span_text = span_element.inner_text()
+                        print("Review Text:", span_text)
+                        comments_value.append(span_text)
+                business.comments = comments_value
+
             business_list.business_list.append(business)
 
-        for business in business_list.business_list:
-
-            page.locator('//input[@id="searchboxinput"]').fill(business.name)
-            page.wait_for_timeout(3000)
-            page.keyboard.press("Enter")
-            page.wait_for_timeout(3000)
-
-            current_url = page.url
-            latitude, longitude = current_url.split('@')[1].split(',')[0:2]
-            business.latitude = latitude
-            business.longitude = longitude
-            page.wait_for_timeout(3000)
-
         
+                
+            
         business_list.save_to_excel(search_for)
         business_list.save_to_csv(search_for)
         browser.close()
@@ -203,5 +226,3 @@ if __name__ == "__main__":
         total = 10
 
     main()
-
-print("selesai")

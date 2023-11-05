@@ -2,8 +2,6 @@ from playwright.sync_api import sync_playwright
 from dataclasses import dataclass, asdict, field
 import pandas as pd
 import argparse
-
-
 @dataclass
 class Business:
     "bussines data"
@@ -17,6 +15,11 @@ class Business:
     reviews_average: float = None
     latitude: float = None
     longitude: float = None
+    comments: str = None
+
+@dataclass
+class Comment:
+    comment: str = None
 
 
 @dataclass
@@ -197,10 +200,8 @@ def main():
                     span_text = span_element.inner_text()
                     print("Review Text:", span_text)
                     comments_value.append(span_text)
+            business.comments = comments_value
             
-
-
-        
         business_list.save_to_excel(search_for)
         business_list.save_to_csv(search_for)
         browser.close()
