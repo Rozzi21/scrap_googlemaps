@@ -1,8 +1,6 @@
 import csv
 import os
 import asyncio
-from PIL import Image
-from rembg import remove 
 from playwright.async_api import async_playwright
 from urllib.parse import urlparse
 
@@ -49,7 +47,7 @@ async def scrape_images(query):
         # Download dan simpan gambar dalam folder
         valid_links = [link for link in image_links if is_valid_url(link)]
         for i, link in enumerate(valid_links, start=1):
-            await download_image(link, folder_name, f'{query}_{i}')
+            await download_image(link, folder_name, f'{query}_{i}.jpg')
 
 async def download_image(url, folder, filename):
 
@@ -61,19 +59,7 @@ async def download_image(url, folder, filename):
             await page.goto(url)
             print(url)
             print(f"Downloading {filename}")
-            screenshot_path = f'{folder}/{filename}.png'
-            await page.screenshot(path=screenshot_path)
-            # Buka gambar dengan Pillow
-            img = Image.open(screenshot_path)
-
-            # Konversi latar belakang hitam menjadi transparan
-            img = img.convert("RGBA")
-            
-            img = remove(img)
-
-            # Simpan gambar dengan latar belakang transparan
-            img.save(screenshot_path, "PNG")
-                
+            await page.screenshot(path=f'{folder}/{filename}')
             await browser.close()
 
 async def count_images(query):
@@ -81,7 +67,7 @@ async def count_images(query):
     if not os.path.exists(folder_name):
         return 0
     
-    image_count = len([file for file in os.listdir(folder_name) if file.endswith('.png')])
+    image_count = len([file for file in os.listdir(folder_name) if file.endswith('.jpg')])
     return image_count
 
 
