@@ -33,6 +33,10 @@ __pycache__/
 *.gif
 
 
+#  Venv
+venv/
+
+
 
 # Distribution / packaging
 .Python
