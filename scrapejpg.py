@@ -1,6 +1,7 @@
 import csv
 import os
 import asyncio
+import pyvips
 from playwright.async_api import async_playwright
 from urllib.parse import urlparse
 
@@ -59,7 +60,18 @@ async def download_image(url, folder, filename):
             await page.goto(url)
             print(url)
             print(f"Downloading {filename}")
-            await page.screenshot(path=f'{folder}/{filename}')
+            screenshot_path = f'{folder}/{filename}.jpg'
+            await page.screenshot(path=screenshot_path)
+
+            # Load gambar dengan PyVips
+            image = pyvips.Image.new_from_file(screenshot_path)
+            
+            # ambil sisi left top width dan height
+            left, top, width, height = image.find_trim(threshold=2, background=[255, 255, 255])
+            image = image.crop(left, top, width, height)
+
+            # simpan gambar
+            image.write_to_file(image.write_to_file(f'{folder}/{filename}'))
             await browser.close()
 
 async def count_images(query):
