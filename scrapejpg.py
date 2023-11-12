@@ -9,10 +9,10 @@ async def scrape_images(query):
         browser = await p.chromium.launch()
         page = await browser.new_page()
 
-        print(f"Memulai scraping untuk query: {query}",timeout=60000)
+        print(f"Memulai scraping untuk query: {query}")
 
         # Membuka Google Images
-        await page.goto(f'https://www.google.com/search?q={query}&tbm=isch')
+        await page.goto(f'https://www.google.com/search?q={query}&tbm=isch',timeout=60000)
 
         image_links = []
 
