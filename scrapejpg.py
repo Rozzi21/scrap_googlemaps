@@ -1,8 +1,7 @@
 import csv
 import os
 import asyncio
-import pyvips
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, TimeoutError
 from urllib.parse import urlparse
 
 async def scrape_images(query):
@@ -55,33 +54,15 @@ async def download_image(url, folder, filename):
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
-
         if is_valid_url(url):
-            await page.goto(url)
-            print(url)
-            print(f"Downloading {filename}")
-            screenshot_path = f'{folder}/{filename}.jpg'
-            await page.screenshot(path=screenshot_path)
-
-            # Load gambar dengan PyVips
-            image = pyvips.Image.new_from_file(screenshot_path)
-            
-            # ambil sisi left top width dan height
-            left, top, width, height = image.find_trim(threshold=2, background=[255, 255, 255])
-            image = image.crop(left, top, width, height)
-
-            # simpan gambar
-            image.write_to_file(image.write_to_file(f'{folder}/{filename}'))
-            await browser.close()
-
-async def count_images(query):
-    folder_name = query.replace(' ', '-')
-    if not os.path.exists(folder_name):
-        return 0
-    
-    image_count = len([file for file in os.listdir(folder_name) if file.endswith('.jpg')])
-    return image_count
-
+            try:
+                await page.goto(url, timeout=60000)
+                print(f"Downloading {filename}")
+                await page.locator("img").screenshot(path=f'{folder}/{filename}')
+            except TimeoutError:
+                print(f"Timeout ketika mengakses {url}. Melanjutkan ke link berikutnya.")
+            finally: 
+                await browser.close()
 
 def is_valid_url(url):
     try:
@@ -97,8 +78,3 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.gather(*(scrape_images(query[0]) for query in queries)))
-
-for query in queries:
-    query = query[0]
-    download_count = count_images(query)
-    print(f"jumlah gambar di untuh dari query '{query}': '{download_count}'")
