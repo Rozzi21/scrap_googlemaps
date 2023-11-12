@@ -19,7 +19,7 @@ async def scrape_images(query):
         image_links = []
 
         # Menggulir halaman beberapa kali untuk memuat lebih banyak gambar
-        for _ in range(10):  # Menggulir 5 kali, Anda bisa menyesuaikan jumlahnya
+        for _ in range(10):  # Menggulir 10 kali, Anda bisa menyesuaikan jumlahnya
             await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
             await asyncio.sleep(2) 
         # Menyimpan semua link gambar dalam variabel
@@ -37,8 +37,8 @@ async def scrape_images(query):
         await browser.close()
 
         #batasi jumlah gambar maksimum menjadi 100
-        if len(image_links) > 200:
-            image_links = image_links[:200]
+        if len(image_links) > 300:
+            image_links = image_links[:300]
 
         # Buat folder sesuai dengan query
         folder_name = query.replace(' ', '_')
@@ -59,7 +59,6 @@ async def download_image(url, folder, filename):
 
         if is_valid_url(url):
             await page.goto(url)
-            print(url)
             print(f"Downloading {filename}")
             screenshot_path = f'{folder}/{filename}.png'
             await page.screenshot(path=screenshot_path)

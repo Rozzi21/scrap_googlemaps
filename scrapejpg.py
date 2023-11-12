@@ -9,7 +9,7 @@ async def scrape_images(query):
         browser = await p.chromium.launch()
         page = await browser.new_page()
 
-        print(f"Memulai scraping untuk query: {query}")
+        print(f"Memulai scraping untuk query: {query}",timeout=60000)
 
         # Membuka Google Images
         await page.goto(f'https://www.google.com/search?q={query}&tbm=isch')
@@ -17,7 +17,7 @@ async def scrape_images(query):
         image_links = []
 
         # Menggulir halaman beberapa kali untuk memuat lebih banyak gambar
-        for _ in range(10):  # Menggulir 5 kali, Anda bisa menyesuaikan jumlahnya
+        for _ in range(10):  # Menggulir 10 kali, Anda bisa menyesuaikan jumlahnya
             await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
             await asyncio.sleep(2) 
         # Menyimpan semua link gambar dalam variabel
@@ -35,8 +35,8 @@ async def scrape_images(query):
         await browser.close()
 
         #batasi jumlah gambar maksimum menjadi 100
-        if len(image_links) > 200:
-            image_links = image_links[:200]
+        if len(image_links) > 300:
+            image_links = image_links[:300]
 
         # Buat folder sesuai dengan query
         folder_name = query.replace(' ', '_')
@@ -48,6 +48,8 @@ async def scrape_images(query):
         valid_links = [link for link in image_links if is_valid_url(link)]
         for i, link in enumerate(valid_links, start=1):
             await download_image(link, folder_name, f'{query}_{i}.jpg')
+
+
 
 async def download_image(url, folder, filename):
 
@@ -78,3 +80,5 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.gather(*(scrape_images(query[0]) for query in queries)))
+
+print("selesai")
