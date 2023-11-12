@@ -17,3 +17,15 @@ MacOs/Linux
   python3 -m venv venv
   pip install -r requirements.txt
 ```
+
+for jpg result
+
+```bash
+  python scrapejpg.py
+```
+
+for png result
+
+```bash
+  python scrapejpg.py
+```
