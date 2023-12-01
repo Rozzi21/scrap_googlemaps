@@ -104,7 +104,7 @@ async def download_image(url, folder, filename):
                 screenshot_path = f'{folder}/{filename}'
                 await page.locator("img").screenshot(path=screenshot_path)
 
-                enhance_image_quality(screenshot_path)
+                # enhance_image_quality(screenshot_path)
 
                 # Buka gambar dengan Pillow
                 img_tensor = transform_image(screenshot_path)

@@ -1,6 +1,13 @@
 import csv
 import os
 import asyncio
+import torch
+import cv2
+import numpy as np
+from PIL import Image
+from torchvision import transforms
+import torchvision.transforms.functional as F
+from super_image import EdsrModel
 from playwright.async_api import async_playwright, TimeoutError
 from urllib.parse import urlparse
 
@@ -22,17 +29,22 @@ async def scrape_images(query):
             await asyncio.sleep(2) 
         # Menyimpan semua link gambar dalam variabel
         image_links = await page.evaluate('''
-            () => {
+            (async () => { // Ubah fungsi ini menjadi fungsi async
                 const links = [];
                 const elements = document.querySelectorAll('.rg_i');
                 for (const element of elements) {
-                    links.push(element.getAttribute('src'));
+                    element.click(); // Simulate click
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Sekarang ini bekerja karena fungsi adalah async
+                    const highResImage = document.querySelector('[role="link"] img[aria-hidden="false"]'); 
+                    if (highResImage) {
+                        links.push(highResImage.getAttribute('src'));
+                    }
+                    // Logic untuk menutup drawer dan berpindah ke gambar berikutnya
                 }
                 return links;
-            }
-                                          
-                                          
+            })()
         ''')
+
 
         await browser.close()
 
@@ -52,7 +64,6 @@ async def scrape_images(query):
             await download_image(link, folder_name, f'{query}_{i}.jpg')
 
 
-
 async def download_image(url, folder, filename):
 
     async with async_playwright() as p:
@@ -62,7 +73,10 @@ async def download_image(url, folder, filename):
             try:
                 await page.goto(url, timeout=60000)
                 print(f"Downloading {filename}")
-                await page.locator("img").screenshot(path=f'{folder}/{filename}')
+                screenshot_path = f'{folder}/{filename}'
+                await page.locator("img").screenshot(path=screenshot_path)
+                img = screenshot_path
+                img.save(f'{folder}/{filename}')
             except TimeoutError:
                 print(f"Timeout ketika mengakses {url}. Melanjutkan ke link berikutnya.")
             finally: 
