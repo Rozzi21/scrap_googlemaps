@@ -1,13 +1,6 @@
 import csv
 import os
 import asyncio
-import torch
-import cv2
-import numpy as np
-from PIL import Image
-from torchvision import transforms
-import torchvision.transforms.functional as F
-from super_image import EdsrModel
 from playwright.async_api import async_playwright, TimeoutError
 from urllib.parse import urlparse
 
@@ -48,9 +41,9 @@ async def scrape_images(query):
 
         await browser.close()
 
-        #batasi jumlah gambar maksimum menjadi 100
-        if len(image_links) > 300:
-            image_links = image_links[:300]
+        #batasi jumlah gambar maksimum
+        if len(image_links) > 1:
+            image_links = image_links[:1]
 
         # Buat folder sesuai dengan query
         folder_name = query.replace(' ', '_')
